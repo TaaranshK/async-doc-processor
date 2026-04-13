@@ -1,0 +1,171 @@
+# ==============================================================================
+# Async Document Processing — Docker Compose
+# ==============================================================================
+# Five core processes:
+#   1. postgres   — relational store
+#   2. redis      — Celery broker + pub/sub event bus
+#   3. api        — FastAPI (Gunicorn + Uvicorn workers)
+#   4. worker     — Celery background workers
+#   5. frontend   — Next.js dev server
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build
+# ==============================================================================
+
+name: async-doc-processor
+
+# --------------------------------------------------------------------------
+# Services
+# --------------------------------------------------------------------------
+services:
+
+  # --------------------------------------------------------------------------
+  # 1. PostgreSQL
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-docprocessor}
+      POSTGRES_USER:     ${POSTGRES_USER:-docuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-docuser} -d ${POSTGRES_DB:-docprocessor}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # --------------------------------------------------------------------------
+  # 2. Redis
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --loglevel warning
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # --------------------------------------------------------------------------
+  # 3. FastAPI — API Server
+  # --------------------------------------------------------------------------
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      gunicorn app.main:app
+        --worker-class uvicorn.workers.UvicornWorker
+        --workers 2
+        --bind 0.0.0.0:8000
+        --timeout 120
+        --access-logfile -
+        --error-logfile -
+    volumes:
+      - uploads:/app/uploads
+      - ./backend:/app:delegated
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # --------------------------------------------------------------------------
+  # 4. Celery — Background Worker
+  # --------------------------------------------------------------------------
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+    command: >
+      celery -A app.workers.celery_app worker
+        --loglevel=info
+        --concurrency=${CELERY_WORKER_CONCURRENCY:-4}
+        --queues=documents
+        --hostname=worker@%h
+    volumes:
+      - uploads:/app/uploads
+      - ./backend:/app:delegated
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy   # ensures DB migrations have run first
+
+  # --------------------------------------------------------------------------
+  # 5. Vite + React — Frontend
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+      VITE_API_URL_INTERNAL: http://api:8000
+    volumes:
+      - ./frontend:/app:delegated
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+
+# --------------------------------------------------------------------------
+# Volumes
+# --------------------------------------------------------------------------
+volumes:
+  postgres_data:
+  redis_data:
+  uploads:
+  frontend_node_modules:
+
+# --------------------------------------------------------------------------
+# Networks
+# --------------------------------------------------------------------------
+networks:
+  default:
+    name: async-doc-processor-net
