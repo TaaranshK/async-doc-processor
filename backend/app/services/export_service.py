@@ -30,6 +30,7 @@ logger = get_logger(__name__)
 
 class ExportNotReadyError(ValueError):
     # Raised when trying to export a result that's not finished yet
+    pass
 
 
 # -------
