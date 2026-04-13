@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import List, Literal
+from urllib.parse import quote
 
 from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -47,8 +48,9 @@ class Settings(BaseSettings):
     def DATABASE_URL(self) -> str:
         if self.DATABASE_URL_OVERRIDE:
             return self.DATABASE_URL_OVERRIDE
+        encoded_password = quote(self.POSTGRES_PASSWORD, safe='')
         return (
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{encoded_password}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
@@ -57,8 +59,9 @@ class Settings(BaseSettings):
     def SYNC_DATABASE_URL(self) -> str:
         if self.SYNC_DATABASE_URL_OVERRIDE:
             return self.SYNC_DATABASE_URL_OVERRIDE
+        encoded_password = quote(self.POSTGRES_PASSWORD, safe='')
         return (
-            f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"postgresql+psycopg2://{self.POSTGRES_USER}:{encoded_password}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
