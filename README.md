@@ -88,100 +88,415 @@
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Getting Started (Complete Setup Guide)
 
-### 1️⃣ Clone & Setup
+Follow these steps **exactly** to get everything running. Estimated time: **10-15 minutes**.
 
-```bash
-# Clone repository
+### ⚠️ Prerequisites Check
+
+Before starting, verify you have these installed:
+
+```powershell
+# Check Python version (should be 3.11 or higher)
+python --version
+
+# Check Node version (should be 18 or higher)
+node --version
+
+# Check PostgreSQL is running (should return version)
+psql --version
+
+# Verify PostgreSQL is running
+psql -U postgres -c "SELECT version();"
+```
+
+If any command fails, install the missing software from:
+
+- Python: https://www.python.org/downloads/
+- Node.js: https://nodejs.org/
+- PostgreSQL: https://www.postgresql.org/download/
+
+---
+
+### Step 1: Clone & Navigate to Project
+
+```powershell
+# Clone the repository
 git clone <repository-url>
 cd async-doc-processor
 
-# Create Python virtual environment
-python -m venv ven
-.\ven\Scripts\Activate.ps1  # Windows
-# or
-source ven/bin/activate     # macOS/Linux
+# Verify you're in the right directory
+# You should see: backend/, frontend/, README.md, etc.
+ls
+```
 
-# Install Python dependencies
+---
+
+### Step 2: Create Virtual Environment (Backend)
+
+```powershell
+# Create Python virtual environment named 'ven'
+python -m venv ven
+
+# Activate virtual environment
+# On Windows:
+.\ven\Scripts\Activate.ps1
+
+# You should see (ven) at the start of your prompt now
+# If you get an execution policy error, run this first:
+# Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Verify activation:**
+
+```powershell
+# This should show the venv Python path
+python -c "import sys; print(sys.executable)"
+```
+
+---
+
+### Step 3: Install Backend Dependencies
+
+```powershell
+# Navigate to backend directory
 cd backend
+
+# Install all Python packages
 pip install -r requirements.txt
 
-# Install Node dependencies
+# This will take 2-3 minutes. Wait for it to complete.
+```
+
+---
+
+### Step 4: Install Frontend Dependencies
+
+```powershell
+# Navigate to frontend directory
 cd ../frontend
+
+# Install Node packages
 npm install
+
+# This will take 1-2 minutes. Wait for it to complete.
+
+# Go back to root directory
 cd ..
 ```
 
-### 2️⃣ Configure Environment
+---
 
-Create `.env` file in root directory:
+### Step 5: Create Environment Configuration File
 
-```bash
+**Windows PowerShell:**
+
+```powershell
+# Create .env file in the root directory
+@"
 # Application
 APP_ENV=development
 
-# JWT Security
+# JWT Security (keep these for development)
 SECRET_KEY=your-super-secret-key-change-this-in-production-12345678
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 JWT_ALGORITHM=HS256
 
 # CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000,http://127.0.0.1:5173
 
-# PostgreSQL
+# PostgreSQL (Update password to YOUR Postgres password)
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=docprocessor
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_password_here
+POSTGRES_PASSWORD=your_postgres_password_here
 
-# Redis (optional, for background tasks)
+# Redis (optional for development)
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_DB=0
 REDIS_PASSWORD=
+"@ | Out-File -FilePath .env -Encoding UTF8
 ```
 
-### 3️⃣ Initialize Database
+**Or manually create `.env` file:**
 
-```bash
-# Create tables
+- Create a new file named `.env` in the root directory
+- Copy the content above into it
+- Replace `your_postgres_password_here` with your actual PostgreSQL password
+
+---
+
+### Step 6: Verify Database Connection
+
+```powershell
+# Verify PostgreSQL is running by testing connection
+python backend/test_db_connection.py
+
+# You should see:
+# ✓ Connection successful!
+# ✓ Database 'docprocessor' already exists.
+
+# If database doesn't exist, it will be created automatically.
+```
+
+---
+
+### Step 7: Initialize Database Tables
+
+```powershell
+# Create all database tables
 python init_db.py
 
-# Verify connection
-python backend/test_db_connection.py
+# You should see:
+# DATABASE_URL: postgresql+asyncpg://postgres:...
+# --- Testing SQLAlchemy async engine ---
+# Creating tables...
+# ✓ Tables created successfully!
+# ✓ Database initialization complete!
 ```
 
-Output should show:
+---
 
+### Step 8: Start Backend Server
+
+**Open a NEW PowerShell terminal and run:**
+
+```powershell
+# Navigate to backend directory
+cd async-doc-processor\backend
+
+# Activate virtual environment
+.\ven\Scripts\Activate.ps1
+
+# Start the server
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# You should see:
+# INFO:     Will watch for changes in these directories: [...]
+# INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+# INFO:     Started server process
+# INFO:     Application startup complete.
 ```
-✓ Connection successful!
-✓ Database 'docprocessor' already exists.
+
+✅ **Backend is now running!** Keep this terminal open.
+
+**Access API documentation:**
+
+- Swagger UI: http://127.0.0.1:8000/docs
+- ReDoc: http://127.0.0.1:8000/redoc
+- Health Check: http://127.0.0.1:8000/health
+
+---
+
+### Step 9: Start Frontend Server
+
+**Open a DIFFERENT PowerShell terminal and run:**
+
+```powershell
+# Navigate to frontend directory
+cd async-doc-processor\frontend
+
+# Start development server
+npm run dev
+
+# You should see:
+# VITE v5.4.19  ready in XXX ms
+# ➜  Local:   http://localhost:5173/
+# ➜  press h + enter to show help
 ```
 
-### 4️⃣ Start Services
+✅ **Frontend is now running!** Keep this terminal open.
 
-**Terminal 1 - Backend:**
+---
 
-```bash
+### Step 10: Test Everything Works
+
+**Open a THIRD PowerShell terminal and run:**
+
+```powershell
+# Navigate to root directory
+cd async-doc-processor
+
+# Run API tests
+python test_apis.py
+
+# You should see all 8 tests pass:
+# ✅ PASS - Health Check
+# ✅ PASS - List Jobs
+# ✅ PASS - Register User
+# ✅ PASS - Login
+# ✅ PASS - Invalid Login
+# ✅ PASS - Invalid Upload
+# ✅ PASS - Get Non-existent Job
+# ✅ PASS - List with Filters
+#
+# Total: 8/8 tests passed
+# 🎉 All tests passed!
+```
+
+---
+
+### 🎉 You're All Set!
+
+Your complete setup is running on:
+
+| Service         | URL                         | Purpose                  |
+| --------------- | --------------------------- | ------------------------ |
+| **Frontend**    | http://localhost:5173       | React web application    |
+| **Backend API** | http://127.0.0.1:8000       | REST API server          |
+| **API Docs**    | http://127.0.0.1:8000/docs  | Swagger UI documentation |
+| **ReDoc**       | http://127.0.0.1:8000/redoc | Alternative API docs     |
+
+---
+
+## 🧪 Quick Test Commands
+
+Now that everything is running, try these:
+
+### Register a User
+
+```powershell
+curl -X POST http://127.0.0.1:8000/api/v1/auth/register `
+  -H "Content-Type: application/json" `
+  -d '{
+    "email":"test@example.com",
+    "password":"TestPass123!@",
+    "full_name":"Test User"
+  }'
+
+# Expected response: 201 Created with user ID
+```
+
+### Login
+
+```powershell
+curl -X POST http://127.0.0.1:8000/api/v1/auth/login `
+  -H "Content-Type: application/json" `
+  -d '{
+    "email":"test@example.com",
+    "password":"TestPass123!@"
+  }'
+
+# Expected response: 200 OK with access_token and refresh_token
+```
+
+### Check API Health
+
+```powershell
+curl http://127.0.0.1:8000/health
+
+# Expected response: {"status":"ok"}
+```
+
+---
+
+## ⚠️ Common Issues & Solutions
+
+### Issue: "ModuleNotFoundError: No module named 'app'"
+
+**Solution:**
+
+```powershell
+# Make sure you're in the backend directory
 cd backend
+
+# Verify virtual environment is activated (should see (ven) in prompt)
+.\ven\Scripts\Activate.ps1
+
+# Try running again
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-**Terminal 2 - Frontend:**
+---
 
-```bash
-cd frontend
-npm run dev
+### Issue: "Cannot find path '...ven\Scripts\Activate.ps1'"
+
+**Solution:**
+
+```powershell
+# Recreate virtual environment
+python -m venv ven
+
+# Then activate
+.\ven\Scripts\Activate.ps1
 ```
 
-Access the application:
+---
 
-- **Frontend**: http://localhost:5173 or http://localhost:8080
-- **API Docs**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+### Issue: "Error: listen EADDRINUSE: address already in use :::5173" (Frontend)
+
+**Solution:**
+
+```powershell
+# Use a different port
+npm run dev -- --port 5174
+```
+
+---
+
+### Issue: "Error: [WinError 10013] socket access denied" (Backend)
+
+**Solution:**
+
+```powershell
+# Use localhost instead of 0.0.0.0
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+---
+
+### Issue: "FATAL: role 'postgres' does not exist"
+
+**Solution:**
+
+```powershell
+# Check PostgreSQL is installed and running
+psql --version
+
+# Try with default admin user (depends on your setup)
+# Or reinstall PostgreSQL if needed
+```
+
+---
+
+## 🛑 Stopping Services
+
+To stop any service, press **Ctrl+C** in its terminal.
+
+```powershell
+# Stop backend (in backend terminal)
+Ctrl+C
+
+# Stop frontend (in frontend terminal)
+Ctrl+C
+
+# Deactivate virtual environment
+deactivate
+```
+
+---
+
+## 🔄 Restarting Everything
+
+If something goes wrong, restart in this order:
+
+```powershell
+# Terminal 1: Stop and restart backend
+cd async-doc-processor\backend
+.\ven\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# Terminal 2: Stop and restart frontend
+cd async-doc-processor\frontend
+npm run dev
+
+# Terminal 3: Re-run tests
+cd async-doc-processor
+python test_apis.py
+```
 
 ---
 
