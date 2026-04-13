@@ -1,6 +1,5 @@
 import { get, post } from '@/lib/api-client';
 import { Job, JobsListResponse, JobsFilter } from '@/types/job';
-import { JobResult } from '@/types/result';
 
 export async function fetchJobs(filters: JobsFilter = {}): Promise<JobsListResponse> {
   const params = new URLSearchParams();

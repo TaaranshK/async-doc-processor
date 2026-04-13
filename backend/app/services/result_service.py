@@ -7,9 +7,9 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models.job import Job, JobStatus
-from app.models.result import Result
-from app.schemas.result import ResultResponse, ResultUpdateRequest
+from app.models.job_model import Job, JobStatus
+from app.models.result_model import Result
+from app.schemas.result_schema import ResultResponse, ResultUpdateRequest
 
 
 class ResultNotFoundError(LookupError):
@@ -60,7 +60,7 @@ class ResultService:
     async def finalize_result(self, job_id: uuid.UUID) -> ResultResponse:
         result = await self.get_result(job_id)
         if result.is_finalized:
-            raise ResultAlreadyFinalizedError("Result is already finalized.")
+            return ResultResponse.model_validate(result)
 
         status = (
             await self._db.execute(select(Job.status).where(Job.id == job_id))

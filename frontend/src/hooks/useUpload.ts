@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
+import { uploadDocuments } from '@/api/documents';
 
 interface UploadState {
   files: File[];
@@ -66,19 +67,14 @@ export function useUpload() {
 
   const upload = useCallback(async (): Promise<string[]> => {
     setState(prev => ({ ...prev, uploading: true, progress: 0, error: null }));
-
-    // Simulate upload with progress
-    const jobIds: string[] = [];
-    const totalFiles = state.files.length;
-
-    for (let i = 0; i < totalFiles; i++) {
-      await new Promise(r => setTimeout(r, 400 + Math.random() * 400));
-      jobIds.push(crypto.randomUUID());
-      setState(prev => ({ ...prev, progress: ((i + 1) / totalFiles) * 100 }));
+    try {
+      const response = await uploadDocuments(state.files);
+      setState(prev => ({ ...prev, uploading: false, files: [], progress: 100 }));
+      return response.items.map(item => item.job_id);
+    } catch (error) {
+      setState(prev => ({ ...prev, uploading: false, error: 'Upload failed' }));
+      throw error;
     }
-
-    setState(prev => ({ ...prev, uploading: false, files: [], progress: 100 }));
-    return jobIds;
   }, [state.files]);
 
   const clearError = useCallback(() => {

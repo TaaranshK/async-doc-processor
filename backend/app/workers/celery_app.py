@@ -31,7 +31,6 @@ logger = get_logger(__name__)
 # Normal routing - sends tasks to the right queue
 _DEFAULT_EXCHANGE = Exchange("default", type="direct")
 
-#: For high-priority tasks that need to run first
 _HIGH_PRIORITY_EXCHANGE = Exchange("high_priority", type="direct")
 
 # Different queues for different types of tasks
@@ -55,8 +54,7 @@ TASK_QUEUES: tuple[Queue, ...] = (
 
 # Map specific tasks to specific queues
 TASK_ROUTES: dict[str, dict[str, str]] = {
-    "app.workers.tasks.process_document": {"queue": "documents"},
-    "app.workers.tasks.cancel_document": {"queue": "high_priority"},
+    "app.workers.job_worker.process_document_task": {"queue": "documents"},
 }
 
 
@@ -74,7 +72,7 @@ def _build_celery_app() -> Celery:
         broker=settings.REDIS_URL,
         backend=settings.REDIS_URL,
         # Only load tasks from the workers module, not the whole package
-        include=["app.workers.tasks"],
+        include=["app.workers.job_worker"],
     )
 
     # -----
@@ -140,7 +138,7 @@ def _build_celery_app() -> Celery:
     # Retry settings (if a task fails, try again)
     # -----
     app.conf.task_default_retry_delay = 5
-    app.conf.task_max_retries = 3
+    app.conf.task_max_retries = settings.CELERY_MAX_RETRIES
 
     # -----
     # Queue configuration (where tasks go)
@@ -157,17 +155,7 @@ def _build_celery_app() -> Celery:
     app.conf.timezone = "UTC"
     app.conf.enable_utc = True
 
-    # ---------
-    # Scheduled tasks (run periodically)
-    # ---------
-    # Check for stuck jobs every 10 minutes
-    app.conf.beat_schedule = {
-        "reap-orphaned-jobs": {
-            "task": "app.workers.tasks.reap_orphaned_jobs",
-            "schedule": 60 * 10,  # every 10 minutes
-            "options": {"queue": "high_priority"},
-        },
-    }
+    # No periodic tasks required for v1.
 
     # -----
     # Monitoring
@@ -192,7 +180,7 @@ Example::
 
     from app.workers.celery_app import celery_app
 
-    celery_app.send_task("app.workers.tasks.process_document", args=[job_id])
+    celery_app.send_task("app.workers.job_worker.process_document_task", args=[job_id])
 """
 
 

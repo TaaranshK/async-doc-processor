@@ -53,13 +53,11 @@ async_session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
 # -----
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    # This provides a database session for each request
-    # It automatically saves changes if everything works,
-    # or undoes changes if something goes wrong
+    # Provide a database session for each request.
+    # Services are responsible for committing; this ensures we only roll back on errors.
     async with async_session_factory() as session:
         try:
             yield session
-            await session.commit()
         except Exception:
             await session.rollback()
             raise

@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.models.document import Document
-from app.models.job import Job, JobStatus
+from app.models.document_model import Document
+from app.models.job_model import Job, JobStatus
 from app.services.job_service import InvalidStatusTransitionError, JobService
 
 
@@ -33,7 +33,7 @@ async def test_retry_job_resets_progress_and_assigns_new_task_id(db_session, mon
     await db_session.commit()
 
     monkeypatch.setattr(
-        "app.workers.tasks.process_document.apply_async",
+        "app.workers.job_worker.process_document_task.apply_async",
         lambda *args, **kwargs: SimpleNamespace(id="new-task"),
     )
 

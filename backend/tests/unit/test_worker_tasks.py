@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from app.models.document import Document
-from app.models.job import Job, JobStatus
-from app.models.result import Result
-from app.workers.tasks import _process_document_async
+from app.models.document_model import Document
+from app.models.job_model import Job, JobStatus
+from app.models.result_model import Result
+from app.workers.job_worker import _process_document_async
 
 
 @pytest.mark.asyncio
@@ -28,12 +28,12 @@ async def test_worker_writes_result_only_on_completion(db_session, monkeypatch, 
 
     published_events = []
 
-    async def fake_publish(event):
-        published_events.append(event.event)
+    async def fake_publish(**kwargs):  # type: ignore[no-untyped-def]
+        published_events.append(kwargs.get("event"))
 
-    monkeypatch.setattr("app.workers.tasks.publish_progress", fake_publish)
+    monkeypatch.setattr("app.workers.job_worker.publish_progress", fake_publish)
 
-    await _process_document_async("task-1", job.id, document.id)
+    await _process_document_async(job.id, "task-1")
 
     await db_session.refresh(job)
     stored_job = await db_session.get(Job, job.id)
@@ -66,12 +66,12 @@ async def test_stale_task_is_discarded(db_session, monkeypatch, tmp_path):
     db_session.add(job)
     await db_session.commit()
 
-    async def fail_publish(event):
+    async def fail_publish(**kwargs):  # type: ignore[no-untyped-def]
         raise AssertionError("stale task should not publish progress")
 
-    monkeypatch.setattr("app.workers.tasks.publish_progress", fail_publish)
+    monkeypatch.setattr("app.workers.job_worker.publish_progress", fail_publish)
 
-    await _process_document_async("late-task", job.id, document.id)
+    await _process_document_async(job.id, "late-task")
 
     await db_session.refresh(job)
     stored_job = await db_session.get(Job, job.id)

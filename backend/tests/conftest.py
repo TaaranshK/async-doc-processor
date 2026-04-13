@@ -27,7 +27,7 @@ UPLOADS_PATH.mkdir(parents=True, exist_ok=True)
 test_engine = create_async_engine(settings.DATABASE_URL, future=True, echo=False)
 TestSessionLocal = async_sessionmaker(bind=test_engine, expire_on_commit=False)
 db_session_module.engine = test_engine
-db_session_module.SessionLocal = TestSessionLocal
+db_session_module.async_session_factory = TestSessionLocal
 app_main_module.engine = test_engine
 app = app_main_module.app
 

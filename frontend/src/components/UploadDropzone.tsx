@@ -40,8 +40,12 @@ export function UploadDropzone({ onUploadComplete }: UploadDropzoneProps) {
 
   const handleSubmit = useCallback(async () => {
     if (files.length === 0) return;
-    const jobIds = await upload();
-    onUploadComplete(jobIds);
+    try {
+      const jobIds = await upload();
+      onUploadComplete(jobIds);
+    } catch {
+      // error state handled by hook
+    }
   }, [files, upload, onUploadComplete]);
 
   const formatSize = (bytes: number) => {

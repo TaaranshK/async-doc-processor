@@ -192,7 +192,7 @@ export function JobsTable() {
               </div>
             ))}
           </div>
-        ) : data?.jobs.length === 0 ? (
+        ) : data?.items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-sm text-muted-foreground">No jobs found</p>
             <p className="text-xs text-muted-foreground/60 mt-1">Upload documents to get started</p>
@@ -200,7 +200,7 @@ export function JobsTable() {
         ) : (
           <div className="divide-y divide-border/50 p-1">
             <AnimatePresence mode="popLayout">
-              {data?.jobs.map(job => (
+              {data?.items.map(job => (
                 <JobRow
                   key={job.id}
                   job={job}

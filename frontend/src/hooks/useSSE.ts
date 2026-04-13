@@ -1,53 +1,49 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ProgressEvent } from '@/types/progress';
 
-// Simulated SSE for demo purposes
-const STAGES = [
-  { stage: 'upload_received', pct: 10 },
-  { stage: 'parsing_started', pct: 25 },
-  { stage: 'parsing_completed', pct: 45 },
-  { stage: 'extraction_started', pct: 60 },
-  { stage: 'extraction_completed', pct: 85 },
-  { stage: 'storage_completed', pct: 100 },
+const EVENT_TYPES = [
+  'document_received',
+  'parsing_started',
+  'parsing_completed',
+  'extraction_started',
+  'extraction_completed',
+  'job_completed',
+  'job_failed',
+  'job_cancelled',
 ];
 
 export function useSSE(jobId: string | null) {
   const [progress, setProgress] = useState<ProgressEvent | null>(null);
   const [connected, setConnected] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const stageRef = useRef(0);
-
-  const startSimulation = useCallback(() => {
-    if (!jobId) return;
-    setConnected(true);
-    stageRef.current = 0;
-
-    intervalRef.current = setInterval(() => {
-      if (stageRef.current >= STAGES.length) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        setConnected(false);
-        return;
-      }
-
-      const s = STAGES[stageRef.current];
-      setProgress({
-        event: s.stage,
-        job_id: jobId,
-        progress_pct: s.pct,
-        stage: s.stage,
-        timestamp: new Date().toISOString(),
-        metadata: {},
-      });
-      stageRef.current += 1;
-    }, 1500);
-  }, [jobId]);
 
   useEffect(() => {
-    if (jobId) startSimulation();
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+    if (!jobId) return;
+
+    const base = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const source = new EventSource(`${base}/api/v1/jobs/${jobId}/progress`);
+
+    const handleEvent = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as ProgressEvent;
+        setProgress(data);
+        if (['job_completed', 'job_failed', 'job_cancelled'].includes(data.event)) {
+          setConnected(false);
+        }
+      } catch {
+        // ignore malformed payloads
+      }
     };
-  }, [jobId, startSimulation]);
+
+    EVENT_TYPES.forEach(type => source.addEventListener(type, handleEvent));
+
+    source.onopen = () => setConnected(true);
+    source.onerror = () => setConnected(false);
+
+    return () => {
+      EVENT_TYPES.forEach(type => source.removeEventListener(type, handleEvent));
+      source.close();
+    };
+  }, [jobId]);
 
   return { progress, connected };
 }

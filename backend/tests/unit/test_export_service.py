@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from app.models.document import Document
-from app.models.job import Job, JobStatus
-from app.models.result import Result
+from app.models.document_model import Document
+from app.models.job_model import Job, JobStatus
+from app.models.result_model import Result
 from app.services.export_service import ExportNotReadyError, ExportService
 
 

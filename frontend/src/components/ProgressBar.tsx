@@ -9,12 +9,14 @@ interface ProgressBarProps {
 }
 
 const stageLabels: Record<string, string> = {
-  upload_received: 'Upload received',
+  document_received: 'Document received',
   parsing_started: 'Parsing document...',
   parsing_completed: 'Parsing complete',
   extraction_started: 'Extracting fields...',
   extraction_completed: 'Extraction complete',
-  storage_completed: 'Storing results...',
+  job_completed: 'Completed',
+  job_failed: 'Failed',
+  job_cancelled: 'Cancelled',
 };
 
 export function ProgressBar({ value, stage, className, showLabel = true }: ProgressBarProps) {

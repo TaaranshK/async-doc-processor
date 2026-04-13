@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     LOCAL_STORAGE_PATH: str = "/app/uploads"
     MAX_FILE_SIZE_BYTES: int = 52_428_800
     CHUNKED_WRITE_THRESHOLD_BYTES: int = 10_485_760
-    ALLOWED_MIME_TYPES_STR: str = "application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ALLOWED_MIME_TYPES_STR: str = "application/pdf,text/plain,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
     @computed_field
     @property

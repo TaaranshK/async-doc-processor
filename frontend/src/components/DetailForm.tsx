@@ -11,8 +11,18 @@ interface DetailFormProps {
   onUpdate: (updated: JobResult) => void;
 }
 
+const normalizeFields = (data: ExtractedFields): ExtractedFields => ({
+  title: data.title || '',
+  category: data.category || '',
+  summary: data.summary || '',
+  keywords: data.keywords || [],
+  status: data.status || '',
+  file_metadata: data.file_metadata,
+  extraction_confidence: data.extraction_confidence,
+});
+
 export function DetailForm({ result, onUpdate }: DetailFormProps) {
-  const currentData = result.reviewed_output || result.raw_output;
+  const currentData = normalizeFields(result.reviewed_output || result.raw_output);
   const [fields, setFields] = useState<ExtractedFields>(currentData);
   const [saving, setSaving] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
@@ -20,7 +30,7 @@ export function DetailForm({ result, onUpdate }: DetailFormProps) {
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setFields(result.reviewed_output || result.raw_output);
+    setFields(normalizeFields(result.reviewed_output || result.raw_output));
     setDirty(false);
     setSaved(false);
   }, [result]);
